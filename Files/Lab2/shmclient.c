@@ -1,5 +1,11 @@
 //SHMClient.C
-
+/*
+ * This program requests memory with the same size and key
+ * as defined in shmserver.c and then prints out what the
+ * server placed in memory at that address. So the server
+ * knows this occurred, the first memory address is replaced
+ * with an *.
+ */
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>

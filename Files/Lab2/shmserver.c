@@ -1,5 +1,10 @@
 //SHMServer.C
-
+/*
+ * This program requests the shared memory of a
+ * predefined key and maximum size. It then writes
+ * the alphabet in lower case to the memory and waits
+ * until the client as read it, before exiting.
+ */
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
