@@ -48,10 +48,8 @@ int main()
      * we put there.
      */
     while (*shm != '*'){
-        sleep(1);
-        puts("sleeping!");
+        sleep(1)
     }
 
-    puts("I'm finished now! :)");
     exit(0);
 }
