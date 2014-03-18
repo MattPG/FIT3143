@@ -9,25 +9,30 @@
 
 #define MAXSIZE     27
 
-void die(char *s)
-{
-    perror(s);
-    exit(1);
+// die prints out a descriptive error message then quits the program
+void die(char *s) {
+    perror(s);	// error message
+    exit(1);	// exit call with unsuccessful completion of program
 }
 
-int main()
-{
+int main() {
+	// declare required variables and pointers
     char c;
     int shmid;
     key_t key;
     char *shm, *s;
 
+    // initialise the IPC key
     key = 5678;
 
+    // shmget requests shared memory, if successful it returns a non-zero id
     if ((shmid = shmget(key, MAXSIZE, IPC_CREAT | 0666)) < 0)
+    	// Call an error if the id is negative
         die("shmget");
 
+    // attaches the requested memory to the address space of the server
     if ((shm = shmat(shmid, NULL, 0)) == (char *) -1)
+    	// Call an error if the return is -1
         die("shmat");
 
     /*
@@ -51,5 +56,6 @@ int main()
         sleep(1)
     }
 
+    // Kill program with successful completion
     exit(0);
 }
