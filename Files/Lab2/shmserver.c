@@ -15,6 +15,7 @@ void die(char *s) {
     exit(1);	// exit call with unsuccessful completion of program
 }
 
+// initial function call
 int main() {
 	// declare required variables and pointers
     char c;
@@ -25,7 +26,8 @@ int main() {
     // initialise the IPC key
     key = 5678;
 
-    // shmget requests shared memory, if successful it returns a non-zero id
+    // shmget requests shared memory of MAXSIZE and with key above
+    // if successful it returns a non-zero id
     if ((shmid = shmget(key, MAXSIZE, IPC_CREAT | 0666)) < 0)
     	// Call an error if the id is negative
         die("shmget");
