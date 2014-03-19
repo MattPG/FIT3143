@@ -1,11 +1,8 @@
-/*
- * This program reads in a long string of text into shared memory
- * and prints out how many words are in the string.
- */
-#include <sys/shm.h>
+#include <sys/shm.h> //shm
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <unistd.h> //sleep
+#include <errno.h> //perror
 
 // die prints out a descriptive error message then quits the program
 void die(char* s);
@@ -17,8 +14,8 @@ void die(char* s) {
 int main(void) {
 	// declare required variables and pointers
 	char *fileName = "input_text.txt";
-	char *shm, *currChar, *prevChar;
-	int fileSize, readSize, maxSize, shmid, charSize, numWords;
+	char *shm;
+	int fileSize, readSize, maxSize, shmid, charSize;
 	key_t key;
 	FILE *inputFile;
 	charSize = sizeof(char);
@@ -36,8 +33,7 @@ int main(void) {
 	   maxSize = charSize * (fileSize + 1);
 
 	   // generate ID for key
-	   if((key = ftok("input_text.txt",0)) == -1)
-		   die("ftok");
+	   key = 5343;
 
 	   // request memory that can hold it all
 	   // if successful it returns a non-zero int
@@ -60,22 +56,11 @@ int main(void) {
 	   // add string termination symbol
 	   shm[fileSize+1] = '\0';
 
-	   // Start parsing for words
-	   numWords = 0;
-	   prevChar = malloc(sizeof(char));
-	   *prevChar = ' ';
-	   currChar = shm;
-	   while(*(currChar++)) {
-		   // Check if current char is a space
-		   if(*currChar == ' ' || *currChar == '\n' || *currChar == '\0')
-			   // Check if previous char was non-space
-			   if(*prevChar != ' ' && *prevChar != '\n')
-				   numWords++; //increment word count
-
-		   prevChar = currChar;
-	   };
-
-	   printf("Number of words: %i", numWords);
+	   // wait until other programs finish reading
+	   while(*shm != '$'){
+		   sleep(1);
+		   printf("Waiting for other programs!\n");
+	   }
 
 	   // remove attachment of the shared memory
 	   if(shmdt(shm)==-1)
