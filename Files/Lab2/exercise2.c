@@ -18,7 +18,7 @@ int main(void) {
 	char *fileName = "input_text.txt";
 	char *shm, *currChar, *prevChar;
 	int fileSize, readSize, maxSize, shmid, charSize, numWords;
-	key_t key =  ftok("input_text.txt",0);
+	key_t key;
 	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
@@ -34,17 +34,19 @@ int main(void) {
 	   // define the required size to store it
 	   maxSize = charSize * (fileSize + 1);
 
+	   // generate ID for key
+	   if((key = ftok("input_text.txt",0)) == -1)
+		   die("ftok");
+
 	   // request memory that can hold it all
 	   // if successful it returns a non-zero int
-	   shmid = shmget(key, maxSize, IPC_CREAT | 0666);
-	   // Call an error if the id is negative
-	   if (shmid < 0)
+	   if((shmid = shmget(key, maxSize, IPC_CREAT | 0666))<0)
+		   // Call an error if the id is negative
 		   die("shmget");
 
 	    // attaches the requested memory to the address space of the server
-	    shm = shmat(shmid, NULL, 0);
-    	// Call an error if the return is -1
-		if (shm == (char*) -1)
+	    if((shm = shmat(shmid, NULL, 0)) == (char*) -1)
+	    	// Call an error if the return is -1
 			die("shmat");
 
 	   // Place the text into shared memory
@@ -87,7 +89,5 @@ int main(void) {
 
 
 	   exit(EXIT_SUCCESS);
-	} else	puts("File Failed!");
-
-	exit(EXIT_FAILURE);
+	} else	die("fopen");
 }
