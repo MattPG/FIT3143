@@ -38,7 +38,7 @@ int main() {
         die("shmget");
 
     // attaches the requested memory to the address space of the server
-    if ((shm = shmat(shmid, NULL, 0)) == (char *) -1)
+    if ((shm = shmat(shmid, NULL, 0)) == (char*) -1)
     	// Call an error if the return is -1
         die("shmat");
 
@@ -60,7 +60,7 @@ int main() {
      * we put there.
      */
     while (*shm != '*'){
-        sleep(1)
+        sleep(1);
     }
 
     // Kill program with successful completion

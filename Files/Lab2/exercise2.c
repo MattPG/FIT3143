@@ -15,11 +15,11 @@ void die(char* s) {
 
 int main(void) {
 	// declare required variables and pointers
-	char* fileName = "input_text.txt";
-	char* shm;
-	int fileSize, readSize, maxSize, shmid, charSize;
+	char *fileName = "input_text.txt";
+	char *shm, *currChar, *prevChar;
+	int fileSize, readSize, maxSize, shmid, charSize, numWords;
 	key_t key = 65631;
-	FILE* inputFile;
+	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
 
@@ -33,7 +33,6 @@ int main(void) {
 	   rewind(inputFile);
 	   // define the required size to store it
 	   maxSize = charSize * (fileSize + 1);
-	   printf("num chars: %i",fileSize);
 
 	   // request memory that can hold it all
 	   // if successful it returns a non-zero int
@@ -60,8 +59,24 @@ int main(void) {
 
 	   // add string termination symbol
 	   shm[fileSize+1] = '\0';
-	   puts("Success!");
+
+	   numWords = 0;
+	   prevChar = malloc(sizeof(char));
+	   *prevChar = ' ';
+	   currChar = shm;
+	   while(*(currChar++)) {
+		   // Check if current char is a space
+		   if(*currChar == ' ' || *currChar == '\n' || *currChar == '\0')
+			   // Check if previous char was non-space
+			   if(*prevChar != ' ' && *prevChar != '\n')
+				   numWords++;
+
+		   prevChar = currChar;
+	   };
+
+	   printf("Number of words: %i", numWords);
+
 	} else	puts("File Failed!");
 
-	return 0;
+	exit(EXIT_SUCCESS);
 }
