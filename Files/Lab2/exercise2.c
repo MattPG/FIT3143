@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-
+// Adding this from uni
 // die prints out a descriptive error message then quits the program
 void die(char* s);
 void die(char* s) {
