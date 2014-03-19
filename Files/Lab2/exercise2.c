@@ -5,12 +5,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-// Adding this from uni
+
 // die prints out a descriptive error message then quits the program
 void die(char* s);
 void die(char* s) {
     perror(s);	// error message
-    exit(1);	// exit call with unsuccessful completion of program
+    exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
 }
 
 int main(void) {
@@ -18,7 +18,7 @@ int main(void) {
 	char *fileName = "input_text.txt";
 	char *shm, *currChar, *prevChar;
 	int fileSize, readSize, maxSize, shmid, charSize, numWords;
-	key_t key = 65631;
+	key_t key =  ftok("input_text.txt",0);
 	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
@@ -39,13 +39,13 @@ int main(void) {
 	   shmid = shmget(key, maxSize, IPC_CREAT | 0666);
 	   // Call an error if the id is negative
 	   if (shmid < 0)
-	        die("shmget");
+		   die("shmget");
 
 	    // attaches the requested memory to the address space of the server
 	    shm = shmat(shmid, NULL, 0);
     	// Call an error if the return is -1
 		if (shm == (char*) -1)
-	        die("shmat");
+			die("shmat");
 
 	   // Place the text into shared memory
 	   readSize = fread(shm, charSize, fileSize, inputFile);
@@ -60,6 +60,7 @@ int main(void) {
 	   // add string termination symbol
 	   shm[fileSize+1] = '\0';
 
+	   // Start parsing for words
 	   numWords = 0;
 	   prevChar = malloc(sizeof(char));
 	   *prevChar = ' ';
@@ -76,7 +77,17 @@ int main(void) {
 
 	   printf("Number of words: %i", numWords);
 
+	   // remove attachment of the shared memory
+	   if(shmdt(shm)==-1)
+		  die("shmdt");
+
+	   // remove memory allocation
+	   if(shmctl(shmid, IPC_RMID, 0)==-1)
+		   die("shmctl");
+
+
+	   exit(EXIT_SUCCESS);
 	} else	puts("File Failed!");
 
-	exit(EXIT_SUCCESS);
+	exit(EXIT_FAILURE);
 }

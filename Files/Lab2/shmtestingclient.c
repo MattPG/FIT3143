@@ -21,7 +21,7 @@ void die(char *s)
 int main() {
 	// declare required variables and pointers
     int shmid;
-    key_t key = 65631;
+    key_t key = ftok("input_text.txt",0);
     char *shm, *s;
     int MAXSIZE = 1163;
     // request memory of size MAXSIZE with key above and place id in shmid
