@@ -53,11 +53,8 @@ int main(void) {
 	   readSize = fread(shm, charSize, fileSize, inputFile);
 
 	   // check readSize was allocated correctly
-	   if (fileSize != readSize) {
-		   // throw away the memory
-		   free(shm);
+	   if (fileSize != readSize)
 		   die("Parsed sizes don't match!");
-		}
 
 	   // add string termination symbol
 	   shm[fileSize+1] = '\0';
@@ -72,7 +69,7 @@ int main(void) {
 		   if(*currChar == ' ' || *currChar == '\n' || *currChar == '\0')
 			   // Check if previous char was non-space
 			   if(*prevChar != ' ' && *prevChar != '\n')
-				   numWords++;
+				   numWords++; //increment word count
 
 		   prevChar = currChar;
 	   };
