@@ -77,7 +77,6 @@ int main() {
 
 	   }while(currChar != '\0');
 
-	   printf("Adding %i words...", numWords);
 	   // get access to and increment the shared counter
 	   incCounter(numWords, ckey);
 
