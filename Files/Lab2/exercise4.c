@@ -7,16 +7,14 @@
 #include <errno.h> //perror
 
 // HEADER
-// placeSize puts an int into common shared memory
-int* placeMaxSize(int maxSize, int *shmid, key_t mkey);
 // die prints out a descriptive error message then quits the program
 void die(char* s);
 
 int main(void) {
 	// declare required variables and pointers
 	char *fileName = "input_text.txt", *shm;
-	int *comm, *counter, *pointer;
-	int fileSize, readSize, maxSize, shmid, charSize, commid, counterid, pid, semid;
+	int *counter, *pointer;
+	int fileSize, readSize, maxSize, shmid, charSize, counterid, pid, semid;
 	key_t key = 5343, ckey = 15, mkey = 10, pkey = 5, skey = 21;
 	FILE *inputFile;
 	charSize = sizeof(char);
@@ -32,9 +30,6 @@ int main(void) {
 	   rewind(inputFile);
 	   // define the required size to store it
 	   maxSize = charSize * (fileSize + 1);
-
-	   // place the maximum size in common memory to be accessed by clients
-	   comm = placeMaxSize(maxSize, &commid, mkey);
 
 	   // create memory that can hold it all
 	   // if successful it returns a non-zero int
@@ -93,12 +88,11 @@ int main(void) {
 
 	   // wait until other programs finish
 	   while(*shm != '$'){
-		   sleep(1);
 		   semid = semget(key, 10, 0666 | IPC_CREAT);
 		   printf("Waiting for other programs!\n");
+		   sleep(1);
 	   }
 
-	   sleep(3);
 	   // print counter value
 	   printf("Total number of words: %i\n",*counter);
 
@@ -148,24 +142,4 @@ int main(void) {
 void die(char* s) {
     perror(s);	// error message
     exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
-}
-
-// places the value of maxSize into shared memory
-int* placeMaxSize(int maxSize, int *commid, key_t mkey){
-	int *comm;
-
-   // request memory that can hold maxSize (int)
-   // if successful it returns a non-zero int
-   if((*commid = shmget(mkey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
-	   // Call an error if the id is negative
-	   die("shmget_placeSize");
-
-	// attaches the requested memory to the address space of the server
-	if((comm = shmat(*commid, NULL, 0)) == (void*) -1)
-		// Call an error if the return is -1
-		die("shmat_placeSize");
-
-	// Set the value in shared memory to be maxSize
-	*comm = maxSize;
-	return comm;
 }
