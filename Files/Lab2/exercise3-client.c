@@ -64,7 +64,6 @@ int main() {
 
 	  // Start parsing for words
 	   numWords = 0;
-	   getNextChar(&prevChar, &currChar, pid, p, shm);
 	   do {
 		   getNextChar(&prevChar, &currChar, pid, p, shm);
 		   // Check if current char is a space
@@ -78,6 +77,7 @@ int main() {
 
 	   }while(currChar != '\0');
 
+	   printf("Adding %i words...", numWords);
 	   // get access to and increment the shared counter
 	   incCounter(numWords, ckey);
 
