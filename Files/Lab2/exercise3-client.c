@@ -68,9 +68,12 @@ int main() {
 	   do {
 		   getNextChar(&prevChar, &currChar, pid, p, shm);
 		   // Check if current char is a space
-		   if(currChar == ' ' || currChar == '\n' || currChar == '\0')
+		   if(currChar == ' ' || currChar == '\n' || currChar == '\r'
+				   || currChar == '\t'|| currChar == '\0')
 			   // Check if previous char was non-space
-			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\0')
+			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
+					   && prevChar != '\t' && prevChar != '\0')
+
 				   numWords++; //increment word count
 
 	   }while(currChar != '\0');

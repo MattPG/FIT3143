@@ -67,9 +67,12 @@ int main(void) {
 	   currChar = shm;
 	   while(*(currChar++)) {
 		   // Check if current char is a space
-		   if(*currChar == ' ' || *currChar == '\n' || *currChar == '\0')
+		   if(*currChar == ' ' || *currChar == '\n' || *currChar == '\r'
+				 ||  *currChar == '\t' || *currChar == '\0')
 			   // Check if previous char was non-space
-			   if(*prevChar != ' ' && *prevChar != '\n')
+			   if(*prevChar != ' ' && *prevChar != '\n' &&
+					   *prevChar != '\r' && *prevChar != '\r')
+
 				   numWords++; //increment word count
 
 		   prevChar = currChar;
