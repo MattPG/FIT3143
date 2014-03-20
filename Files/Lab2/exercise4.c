@@ -7,15 +7,28 @@
 #include <errno.h> //perror
 
 // HEADER
+// Gets the next two characters to be analysed
+void getNextChar(char *prevChar, char *currChar, int pointerid, int *p, char *shm);
+// incCounter increments a shared counter by amount
+void incCounter(int amount, key_t ckey);
 // die prints out a descriptive error message then quits the program
 void die(char* s);
 
+// set global int for semaphore
+int semid;
+
+// creating the semaphore structs
+struct sembuf c_lock = { 0, -1, 0};
+struct sembuf c_unlock = { 0, 1, 0};
+struct sembuf p_lock = { 1, -1, 0};
+struct sembuf p_unlock = { 1, 1, 0};
+
 int main(void) {
 	// declare required variables and pointers
-	char *fileName = "input_text.txt", *shm;
-	int *counter, *pointer;
-	int fileSize, readSize, maxSize, shmid, charSize, counterid, pid, semid;
-	key_t key = 5343, ckey = 15, mkey = 10, pkey = 5, skey = 21;
+	char *fileName = "input_text.txt", *shm, currChar, prevChar;
+	int *counter, *pointer, numWords;
+	int fileSize, readSize, maxSize, shmid, charSize, counterid, pointerid;
+	key_t key = 5343, ckey = 15, pkey = 5, skey = 21;
 	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
@@ -64,12 +77,12 @@ int main(void) {
 	   *counter = 0;
 
 	    // request memory for the pointer
-	    if((pid = shmget(pkey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
+	    if((pointerid = shmget(pkey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
 	 	   // Call an error if the id is negative
-	 	   die("shmget_pid");
+	 	   die("shmget_pointerid");
 
 	 	// attach pointer to memory
-	    if((pointer = shmat(pid, NULL, 0)) == (void*) -1)
+	    if((pointer = shmat(pointerid, NULL, 0)) == (void*) -1)
 	 		// Call an error if the return is -1
 	 		die("shmat_pointer");
 
@@ -86,51 +99,67 @@ int main(void) {
 	    if((semctl(semid, 1, SETVAL, 1))==-1)
 	    	die("semctl_setting1");
 
-	   // wait until other programs finish
-	   while(*shm != '$'){
-		   semid = semget(key, 10, 0666 | IPC_CREAT);
-		   printf("Waiting for other programs!\n");
-		   sleep(1);
-	   }
+	    // FORK HERE 2^3 = 8
+	    if(fork() == -1)
+	    	die("fork_1");
+	    if(fork() == -1)
+	    	die("fork_2");
+	    if(fork() == -1)
+	    	die("fork_3");
 
-	   // print counter value
-	   printf("Total number of words: %i\n",*counter);
+		  // Start parsing for words
+		   numWords = 0;
+		   do {
+			   getNextChar(&prevChar, &currChar, pointerid, pointer, shm);
+			   // Check if current char is a space
+			   if(currChar == ' ' || currChar == '\n' || currChar == '\r'
+					   || currChar == '\t'|| currChar == '\0')
+				   // Check if previous char was non-space
+				   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
+						   && prevChar != '\t' && prevChar != '\0')
 
-	   // remove attachment of the shared memory
-	   if(shmdt(shm)==-1)
-		  die("shmdt_shm");
+					   numWords++; //increment word count
 
-	   // remove memory allocation
-	   if(shmctl(shmid, IPC_RMID, 0)==-1)
-		   die("shmctl_shm");
+		   }while(currChar != '\0');
 
-	   // remove attachment of the common memory (maxSize)
-	   if(shmdt(comm)==-1)
-		  die("shmdt_comm");
+		   printf("Adding %i words...\n", numWords);
 
-	   // mark memory for dest (maxSize)
-	   if(shmctl(commid, IPC_RMID, 0)==-1)
-		   die("shmctl_commid");
+		   // get access to and increment the shared counter
+		   incCounter(numWords, ckey);
 
-	   // detach counter
-	   if(shmdt(counter)==-1)
-		   die("shmdt_counter");
+	    if(prevChar != '\0'){
+	    	sleep(1);
+		   // print counter value
+		   printf("Total number of words: %i\n",*counter);
 
-	   // mark counter for destruction
-	   if(shmctl(counterid, IPC_RMID, 0)==-1)
-		   die("shmctl_counter");
+		   // remove attachment of the shared memory
+		   if(shmdt(shm)==-1)
+			  die("shmdt_shm");
 
-	   // detach pointer
-	   if(shmdt(pointer)==-1)
-		   die("shmdt_counter");
+		   // remove memory allocation
+		   if(shmctl(shmid, IPC_RMID, 0)==-1)
+			   die("shmctl_shm");
 
-	   // mark pointer for destruction
-	   if(shmctl(pid, IPC_RMID, 0)==-1)
-		   die("shmctl_counter");
+		   // detach counter
+		   if(shmdt(counter)==-1)
+			   die("shmdt_counter");
 
-	   // mark semaphore for destruction
-	   if((semctl(semid, 0, IPC_RMID))==-1)
-		   die("semctl_destroy");
+		   // mark counter for destruction
+		   if(shmctl(counterid, IPC_RMID, 0)==-1)
+			   die("shmctl_counter");
+
+		   // detach pointer
+		   if(shmdt(pointer)==-1)
+			   die("shmdt_counter");
+
+		   // mark pointer for destruction
+		   if(shmctl(pointerid, IPC_RMID, 0)==-1)
+			   die("shmctl_counter");
+
+		   // mark semaphore for destruction
+		   if((semctl(semid, 0, IPC_RMID))==-1)
+			   die("semctl_destroy");
+	    }
 
 	   exit(EXIT_SUCCESS);
 	} else	die("fopen");
@@ -142,4 +171,58 @@ int main(void) {
 void die(char* s) {
     perror(s);	// error message
     exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
+}
+
+// Increments the shared memory counter by amount
+void incCounter(int amount, key_t ckey){
+	int counterid, *counter;
+
+   // request an existing counter
+   if((counterid = shmget(ckey, sizeof(int), IPC_CREAT | 0666))<0)
+	   // Call an error if the id is negative
+	   die("shmget_incCounter");
+
+	// attaches the requested memory to the address space of the server
+	if((counter = shmat(counterid, NULL, 0)) == (void*) -1)
+		// Call an error if the return is -1
+		die("shmat_incCounter");
+
+	// lock counter
+	if(semop(semid, &c_lock, 1)==-1)
+		die("semctl_lock_incCounter");
+	// increment counter
+	*counter += amount;
+
+	// unlock counter
+	if(semop(semid, &c_unlock, 1)==-1)
+		die("semctl_lock_incCounter");
+}
+
+// Gets the next two characters to be analysed
+void getNextChar(char *prevChar, char *currChar, int pointerid, int *p, char *shm) {
+	// lock pointer
+	if(semop(semid, &p_lock, 1)==-1)
+		die("semctl_lock_pointer");
+
+	// check if pointer has finished
+	if(*p != -1){
+
+		// get char and increment shared pointer
+		*prevChar = (*p == 0) ? ' ' : shm[*p -1];
+		*currChar =	shm[*p];
+
+		// check it's not the end of string
+		if(shm[*p] != '\0')
+			*p = *p +1;
+		else
+			*p = -1;
+
+	} else {
+		*prevChar = '\0';
+		*currChar = '\0';
+	}
+
+	// unlock pointer
+	if(semop(semid, &p_unlock, 1)==-1)
+		die("semctl_unlock_pointer");
 }
