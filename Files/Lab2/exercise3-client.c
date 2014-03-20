@@ -5,10 +5,20 @@
  *      Author: matthew
  */
 #include <sys/shm.h> //shm
+#include <sys/sem.h> //semaphores
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> //sleep
 #include <errno.h> //perror
+
+// set global int for semaphore
+int semid;
+
+// creating the semaphore structs
+struct sembuf c_lock = { 0, -1, 0};
+struct sembuf c_unlock = { 0, 1, 0};
+struct sembuf p_lock = { 1, -1, 0};
+struct sembuf p_unlock = { 1, 1, 0};
 
 // HEADER
 // Gets the next two characters to be analysed
@@ -25,7 +35,7 @@ int main() {
 	// declare required variables and pointers
     int shmid, maxSize, numWords, pid, *p;
     char *shm, currChar, prevChar;
-    key_t key = 5343, ckey = 15, mkey = 10, pkey = 5;
+    key_t key = 5343, ckey = 15, mkey = 10, pkey = 5, skey = 21;
 
     maxSize = getMaxSize(mkey);
 
@@ -49,10 +59,11 @@ int main() {
  		// Call an error if the return is -1
  		die("shmat_p");
 
+    // get the semaphore to lock the counter and pointer
+    semid = semget(skey, 2, 0666 | IPC_CREAT);
+
 	  // Start parsing for words
 	   numWords = 0;
-	   //prevChar = '\0';
-	   //currChar = '\0';
 	   getNextChar(&prevChar, &currChar, pid, p, shm);
 	   do {
 		   getNextChar(&prevChar, &currChar, pid, p, shm);
@@ -119,24 +130,24 @@ void incCounter(int amount, key_t ckey){
 		die("shmat_incCounter");
 
 	// lock counter
-	if(shmctl(counterid, SHM_LOCK, 0)==-1)
-		die("shmctl_lock_incCounter");
+	if(semop(semid, &c_lock, 1)==-1)
+		die("semctl_lock_incCounter");
 	// increment counter
 	*counter += amount;
 
 	// unlock counter
-	if(shmctl(counterid, SHM_UNLOCK, 0)==-1)
-		die("shmctl_unlock_incCounter");
-
+	if(semop(semid, &c_unlock, 1)==-1)
+		die("semctl_lock_incCounter");
 }
 
 // Gets the next two characters to be analysed
 void getNextChar(char *prevChar, char *currChar, int pid, int *p, char *shm) {
+	// lock pointer
+	if(semop(semid, &p_lock, 1)==-1)
+		die("semctl_lock_pointer");
+
 	// check if pointer has finished
 	if(*p != -1){
-		// lock pointer
-		if(shmctl(pid, SHM_LOCK, 0)==-1)
-			die("shmctl_lock_getNextChar");
 
 		// get char and increment shared pointer
 		*prevChar = (*p == 0) ? ' ' : shm[*p -1];
@@ -148,12 +159,12 @@ void getNextChar(char *prevChar, char *currChar, int pid, int *p, char *shm) {
 		else
 			*p = -1;
 
-		// unlock pointer
-		if(shmctl(pid, SHM_UNLOCK, 0)==-1)
-			die("shmctl_unlock_getNextChar");
-
 	} else {
 		*prevChar = '\0';
 		*currChar = '\0';
 	}
+
+	// unlock pointer
+	if(semop(semid, &p_unlock, 1)==-1)
+		die("semctl_unlock_pointer");
 }

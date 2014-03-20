@@ -1,4 +1,5 @@
 #include <sys/shm.h> //shm
+#include <sys/sem.h> //semaphores
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> //sleep
@@ -14,8 +15,8 @@ int main(void) {
 	// declare required variables and pointers
 	char *fileName = "input_text.txt", *shm;
 	int *comm, *counter, *pointer;
-	int fileSize, readSize, maxSize, shmid, charSize, commid, counterid, pid;
-	key_t key = 5343, ckey = 15, mkey = 10, pkey = 5;
+	int fileSize, readSize, maxSize, shmid, charSize, commid, counterid, pid, semid;
+	key_t key = 5343, ckey = 15, mkey = 10, pkey = 5, skey = 21;
 	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
@@ -79,12 +80,24 @@ int main(void) {
 	    // initialise the value of the pointer
 	    *pointer = 0;
 
+	    // create the semaphore to lock the counter and pointer
+	    if((semid = semget(skey, 2, 0666 | IPC_CREAT))==-1)
+	    	die("semget");
+
+	    // initialise the semaphores
+	    if((semctl(semid, 0, SETVAL, 1))==-1)
+	    	die("semctl_setting0");
+	    if((semctl(semid, 1, SETVAL, 1))==-1)
+	    	die("semctl_setting1");
+
 	   // wait until other programs finish
 	   while(*shm != '$'){
 		   sleep(1);
+		   semid = semget(key, 10, 0666 | IPC_CREAT);
 		   printf("Waiting for other programs!\n");
 	   }
 
+	   sleep(3);
 	   // print counter value
 	   printf("Total number of words: %i\n",*counter);
 
@@ -119,6 +132,10 @@ int main(void) {
 	   // mark pointer for destruction
 	   if(shmctl(pid, IPC_RMID, 0)==-1)
 		   die("shmctl_counter");
+
+	   // mark semaphore for destruction
+	   if((semctl(semid, 0, IPC_RMID))==-1)
+		   die("semctl_destroy");
 
 	   exit(EXIT_SUCCESS);
 	} else	die("fopen");
