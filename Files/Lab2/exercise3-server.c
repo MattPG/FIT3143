@@ -4,22 +4,18 @@
 #include <unistd.h> //sleep
 #include <errno.h> //perror
 
+// HEADER
 // placeSize puts an int into common shared memory
-int* placeMaxSize(int maxSize, int *shmid);
+int* placeMaxSize(int maxSize, int *shmid, key_t mkey);
 // die prints out a descriptive error message then quits the program
 void die(char* s);
-void die(char* s) {
-    perror(s);	// error message
-    exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
-}
 
 int main(void) {
 	// declare required variables and pointers
-	char *fileName = "input_text.txt";
-	char *shm;
-	int *comm, *counter;
-	int fileSize, readSize, maxSize, shmid, charSize, commid, counterid;
-	key_t key, ckey;
+	char *fileName = "input_text.txt", *shm;
+	int *comm, *counter, *pointer;
+	int fileSize, readSize, maxSize, shmid, charSize, commid, counterid, pid;
+	key_t key = 5343, ckey = 15, mkey = 10, pkey = 5;
 	FILE *inputFile;
 	charSize = sizeof(char);
 	inputFile = fopen(fileName,"r");
@@ -36,10 +32,7 @@ int main(void) {
 	   maxSize = charSize * (fileSize + 1);
 
 	   // place the maximum size in common memory to be accessed by clients
-	   comm = placeMaxSize(maxSize, &commid);
-
-	   // generate ID for key
-	   key = 5343;
+	   comm = placeMaxSize(maxSize, &commid, mkey);
 
 	   // create memory that can hold it all
 	   // if successful it returns a non-zero int
@@ -62,9 +55,6 @@ int main(void) {
 	   // add string termination symbol
 	   shm[fileSize+1] = '\0';
 
-	   // generate value for ckey
-	   ckey = 15;
-
 	   // create the shared memory counter
 	   if((counterid = shmget(ckey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
 		   die("shmget_counterid");
@@ -75,6 +65,19 @@ int main(void) {
 
 	   // initialise counter to zero
 	   *counter = 0;
+
+	    // request memory for the pointer
+	    if((pid = shmget(pkey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
+	 	   // Call an error if the id is negative
+	 	   die("shmget_pid");
+
+	 	// attach pointer to memory
+	    if((pointer = shmat(pid, NULL, 0)) == (void*) -1)
+	 		// Call an error if the return is -1
+	 		die("shmat_pointer");
+
+	    // initialise the value of the pointer
+	    *pointer = 0;
 
 	   // wait until other programs finish
 	   while(*shm != '$'){
@@ -105,8 +108,16 @@ int main(void) {
 	   if(shmdt(counter)==-1)
 		   die("shmdt_counter");
 
-	   // mark countter for destruction
+	   // mark counter for destruction
 	   if(shmctl(counterid, IPC_RMID, 0)==-1)
+		   die("shmctl_counter");
+
+	   // detach pointer
+	   if(shmdt(pointer)==-1)
+		   die("shmdt_counter");
+
+	   // mark pointer for destruction
+	   if(shmctl(pid, IPC_RMID, 0)==-1)
 		   die("shmctl_counter");
 
 	   exit(EXIT_SUCCESS);
@@ -115,13 +126,19 @@ int main(void) {
 	exit(EXIT_FAILURE);
 }
 
-int* placeMaxSize(int maxSize, int *commid){
-	key_t key = 10;
+// die prints out a descriptive error message then quits the program
+void die(char* s) {
+    perror(s);	// error message
+    exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
+}
+
+// places the value of maxSize into shared memory
+int* placeMaxSize(int maxSize, int *commid, key_t mkey){
 	int *comm;
 
    // request memory that can hold maxSize (int)
    // if successful it returns a non-zero int
-   if((*commid = shmget(key, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
+   if((*commid = shmget(mkey, sizeof(int), IPC_CREAT | IPC_EXCL | 0666))<0)
 	   // Call an error if the id is negative
 	   die("shmget_placeSize");
 

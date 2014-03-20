@@ -62,7 +62,7 @@ int main(void) {
 
 	   // Start parsing for words
 	   numWords = 0;
-	   prevChar = malloc(sizeof(char));
+	   prevChar = (char*) malloc(sizeof(char));
 	   *prevChar = ' ';
 	   currChar = shm;
 	   while(*(currChar++)) {
