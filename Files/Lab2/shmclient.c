@@ -31,8 +31,8 @@ int main() {
     // initialise the value of key (same as server)
     key = 5678;
 
-    // request memory of size MAXSIZE with key above and place id in shmid
-    if ((shmid = shmget(key, MAXSIZE, 0666)) < 0)
+    // request memory of size maxSize with key above and place id in shmid
+    if ((shmid = shmget(key, maxSize, 0666)) < 0)
     	// if id is negative then throw error
         die("shmget");
 
