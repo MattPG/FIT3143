@@ -102,9 +102,9 @@ int main(void) {
 	    // FORK HERE 2^3 = 8
 	    if(fork() == -1)
 	    	die("fork_1");
-	    if(fork() == -1)
+	    if(fork()==-1)
 	    	die("fork_2");
-	    if(fork() == -1)
+	    if(fork()==-1)
 	    	die("fork_3");
 
 		  // Start parsing for words
