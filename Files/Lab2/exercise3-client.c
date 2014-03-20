@@ -12,7 +12,7 @@
 
 // HEADER
 // Gets the next two characters to be analysed
-void getNextChar(char *prevChar, char *currChar, int *p, char *shm);
+void getNextChar(char *prevChar, char *currChar, int pid, int *p, char *shm);
 // incCounter increments a shared counter by amount
 void incCounter(int amount, key_t ckey);
 // getMaxSize retrieves the size of the memory to request
@@ -53,9 +53,9 @@ int main() {
 	   numWords = 0;
 	   //prevChar = '\0';
 	   //currChar = '\0';
-	   getNextChar(&prevChar, &currChar, p, shm);
+	   getNextChar(&prevChar, &currChar, pid, p, shm);
 	   do {
-		   getNextChar(&prevChar, &currChar, p, shm);
+		   getNextChar(&prevChar, &currChar, pid, p, shm);
 		   // Check if current char is a space
 		   if(currChar == ' ' || currChar == '\n' || currChar == '\0')
 			   // Check if previous char was non-space
@@ -119,21 +119,24 @@ void incCounter(int amount, key_t ckey){
 		die("shmat_incCounter");
 
 	// lock counter
-
-
+	if(shmctl(counterid, SHM_LOCK, 0)==-1)
+		die("shmctl_lock_incCounter");
 	// increment counter
 	*counter += amount;
 
 	// unlock counter
+	if(shmctl(counterid, SHM_UNLOCK, 0)==-1)
+		die("shmctl_unlock_incCounter");
 
 }
 
 // Gets the next two characters to be analysed
-void getNextChar(char *prevChar, char *currChar, int *p, char *shm) {
+void getNextChar(char *prevChar, char *currChar, int pid, int *p, char *shm) {
 	// check if pointer has finished
 	if(*p != -1){
 		// lock pointer
-
+		if(shmctl(pid, SHM_LOCK, 0)==-1)
+			die("shmctl_lock_getNextChar");
 
 		// get char and increment shared pointer
 		*prevChar = (*p == 0) ? ' ' : shm[*p -1];
@@ -146,6 +149,8 @@ void getNextChar(char *prevChar, char *currChar, int *p, char *shm) {
 			*p = -1;
 
 		// unlock pointer
+		if(shmctl(pid, SHM_UNLOCK, 0)==-1)
+			die("shmctl_unlock_getNextChar");
 
 	} else {
 		*prevChar = '\0';
