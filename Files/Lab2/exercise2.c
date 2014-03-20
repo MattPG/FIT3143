@@ -1,3 +1,4 @@
+// MATTHEW GREENWOOD 23424303
 /*
  * This program reads in a long string of text into shared memory
  * and prints out how many words are in the string.

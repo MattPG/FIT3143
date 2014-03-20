@@ -1,3 +1,4 @@
+// MATTHEW GREENWOOD 23424303
 //SHMServer.C
 /*
  * This program requests the shared memory of a

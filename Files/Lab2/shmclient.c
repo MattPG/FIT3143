@@ -1,3 +1,4 @@
+// MATTHEW GREENWOOD 23424303
 //SHMClient.C
 /*
  * This program requests memory with the same size and key

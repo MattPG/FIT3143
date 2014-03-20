@@ -1,3 +1,4 @@
+// MATTHEW GREENWOOD 23424303
 /*
  *  This program creates a new thread
  * 	using the fork() function. The child
