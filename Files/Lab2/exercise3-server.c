@@ -93,12 +93,12 @@ int main(void) {
 
 	   // wait until other programs finish
 	   while(*shm != '$'){
-		   sleep(1);
+		   sleep(0.2);
 		   semid = semget(key, 10, 0666 | IPC_CREAT);
 		   printf("Waiting for other programs!\n");
 	   }
 
-	   sleep(3);
+	   sleep(1);
 	   // print counter value
 	   printf("Total number of words: %i\n",*counter);
 

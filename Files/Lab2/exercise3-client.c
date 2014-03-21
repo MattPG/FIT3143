@@ -76,7 +76,7 @@ int main() {
 
 				   numWords++; //increment word count
 
-	   }while(currChar != '\0');
+	   }while(prevChar != '\0');
 
 	   // get access to and increment the shared counter
 	   incCounter(numWords, ckey);
