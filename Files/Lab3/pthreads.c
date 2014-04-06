@@ -2,22 +2,24 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define NUM_THREADS		8
-
-// Declare global counter and string
-char *string;
-int *counter[NUM_THREADS],fileSize;
+#include <math.h>
+#define NUM_THREADS		3
 
 // HEADER
 // method a pthread calls to parse the string
-void *startParse(void* input);
+void* startParse(void* input);
 // error messenger
 void die(char* s);
+
+// Declare global counter and string
+char *string;
+int counter[NUM_THREADS], fileSize, spacing;
+
 
 int main(void) {
 	// declare required variables and pointers
 	char *fileName = "input_text.txt";
-	int fileSize, readSize, charSize;
+	int readSize, charSize, totalCount = 0;
 	long threadID;
 	pthread_t threads[NUM_THREADS];
 	FILE *inputFile;
@@ -35,7 +37,7 @@ int main(void) {
 	   rewind(inputFile);
 
 	   // create memory that can hold it all
-	   string = malloc(fileSize*charSize);
+	   string = malloc(fileSize);
 
 	   // Place the text into shared memory
 	   readSize = fread(string, charSize, fileSize, inputFile);
@@ -45,9 +47,12 @@ int main(void) {
 		   die("Parsed sizes don't match!");
 
 	   // add string termination symbol
-	   string[fileSize+1] = '\0';
+	   string[fileSize] = '\0';
 
-	   // create pthreads here
+	   // compute the spacing between each thread
+	   spacing = (int) ceil((double)(fileSize) / NUM_THREADS);
+
+	   // create threads
 	   printf("Creating threads...\n");
 	   for(threadID=0; threadID < NUM_THREADS; threadID++){
 	     if (pthread_create(&threads[threadID], NULL, startParse, (void*) threadID)){
@@ -56,8 +61,13 @@ int main(void) {
 	     }
 
 	   // wait for all threads to finish
+	   for(threadID = 0; threadID<NUM_THREADS; threadID++){
+		   pthread_join(threads[threadID], NULL);
+		   totalCount += counter[threadID];
+	   }
 
-	   // print the total value
+	   // print the total valuel
+	   printf("Total number of words: %i\n", totalCount);
 
 	   pthread_exit(EXIT_SUCCESS);
 	} else	die("fopen");
@@ -73,27 +83,36 @@ void die(char* s) {
 
 
 // Start parsing for words
-void *startParse(void* input){
-	// Local word counter
+void* startParse(void* input){
+	// declare local string pointers
+	char currChar, prevChar;
+	int currPointer, endPointer;
+
+	// get this thread's ID
 	long threadID = (long) input;
-	printf("Thread #%ld created.\n", threadID);
+	printf("Thread #%ld created...\n", threadID);
+
+	// initialise end pointer
+	endPointer = (threadID == (NUM_THREADS -1)) ? (fileSize) : (spacing * (threadID+1) -1);
+
+	// initialise the local word count
 	counter[threadID] = 0;
 
-//	   do {
-//		   getNextChar(&prevChar, &currChar, pointerid, pointer, shm);
-//		   // Check if current char is a space
-//		   if(currChar == ' ' || currChar == '\n' || currChar == '\r'
-//				   || currChar == '\t'|| currChar == '\0')
-//			   // Check if previous char was non-space
-//			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
-//					   && prevChar != '\t' && prevChar != '\0')
-//
-//				   numWords++; //increment word count
-//
-//	   }while(currChar != '\0');
+	// iterate through string
+	for(currPointer = spacing * threadID; currPointer <= endPointer; currPointer++){
+		currChar = string[currPointer];
+		prevChar = (currPointer == 0) ? ' ' : string[currPointer -1];
+		// Check if current char is a space
+		if(currChar == ' ' || currChar == '\n' || currChar == '\r'
+				|| currChar == '\t'|| currChar == '\0')
+				// Check if previous char was non-space
+			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
+					   && prevChar != '\t' && prevChar != '\0')
+				   	   //increment word counter
+				   	   counter[threadID] = counter[threadID]+1;
+	}
 
 	   // print personal amount
-	   printf("Adding %ld words...\n", counter[threadID]);
-
-	   // increment total amount
+	   printf("Thread #%ld adding %i words...\n",threadID, counter[threadID]);
+	   return 0;
 }
