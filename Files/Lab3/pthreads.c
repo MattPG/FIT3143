@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#define NUM_THREADS		3
+#define NUM_THREADS		8
 
 // HEADER
 // method a pthread calls to parse the string
@@ -13,7 +13,7 @@ void die(char* s);
 
 // Declare global counter and string
 char *string;
-int counter[NUM_THREADS], fileSize, spacing;
+int fileSize, spacing;
 
 
 int main(void) {
@@ -46,9 +46,6 @@ int main(void) {
 	   if (fileSize != readSize)
 		   die("Parsed sizes don't match!");
 
-	   // add string termination symbol
-	   string[fileSize] = '\0';
-
 	   // compute the spacing between each thread
 	   spacing = (int) ceil((double)(fileSize) / NUM_THREADS);
 
@@ -61,15 +58,19 @@ int main(void) {
 	     }
 
 	   // wait for all threads to finish
+	   int *value = malloc(sizeof(int));
 	   for(threadID = 0; threadID<NUM_THREADS; threadID++){
-		   pthread_join(threads[threadID], NULL);
-		   totalCount += counter[threadID];
+		   pthread_join(threads[threadID], value);
+		   totalCount += *value;
 	   }
 
 	   // print the total valuel
 	   printf("Total number of words: %i\n", totalCount);
 
-	   pthread_exit(EXIT_SUCCESS);
+	   // free the allocated memory
+	   free(string);
+
+	   exit(EXIT_SUCCESS);
 	} else	die("fopen");
 
 	exit(EXIT_FAILURE);
@@ -86,7 +87,7 @@ void die(char* s) {
 void* startParse(void* input){
 	// declare local string pointers
 	char currChar, prevChar;
-	int currPointer, endPointer;
+	int currPointer, endPointer, counter;
 
 	// get this thread's ID
 	long threadID = (long) input;
@@ -96,7 +97,7 @@ void* startParse(void* input){
 	endPointer = (threadID == (NUM_THREADS -1)) ? (fileSize) : (spacing * (threadID+1) -1);
 
 	// initialise the local word count
-	counter[threadID] = 0;
+	counter = 0;
 
 	// iterate through string
 	for(currPointer = spacing * threadID; currPointer <= endPointer; currPointer++){
@@ -109,10 +110,10 @@ void* startParse(void* input){
 			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
 					   && prevChar != '\t' && prevChar != '\0')
 				   	   //increment word counter
-				   	   counter[threadID] = counter[threadID]+1;
+				   	   counter++;
 	}
 
 	   // print personal amount
-	   printf("Thread #%ld adding %i words...\n",threadID, counter[threadID]);
-	   return 0;
+	   printf("Thread #%ld adding %i words...\n",threadID, counter);
+	   pthread_exit(counter);
 }
