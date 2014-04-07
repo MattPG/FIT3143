@@ -42,6 +42,9 @@ int main(void) {
 	   // Place the text into shared memory
 	   readSize = fread(string, charSize, fileSize, inputFile);
 
+	   // close the input file
+	   fclose(inputFile);
+
 	   // check no errors occurred in reading file
 	   if (fileSize != readSize)
 		   die("Parsed sizes don't match!");
@@ -64,7 +67,7 @@ int main(void) {
 		   totalCount += *value;
 	   }
 
-	   // print the total valuel
+	   // print the total value
 	   printf("Total number of words: %i\n", totalCount);
 
 	   // free the allocated memory
