@@ -9,7 +9,7 @@ void printMatrices(double *A, int Arows, int Acols, double *B, int Brows, int Bc
 void matrixMultiply(double* myA, int rowsEach, double* B, int Bcols, double* myR, int Acols, int start);
 void getAB(FILE *inputFile, double *A, int Arows, int Acols, double *B, int Brows, int Bcols);
 void getABDim(FILE *inputFile, int* Arows, int* Acols, int* Brows, int* Bcols);
-static void* threadStart(void* input);
+void* threadStart(void* input);
 void die(char* s);
 
 // Declare global counter and string
@@ -29,8 +29,10 @@ int main(void) {
 
 	printf("Reading in matrix data...");
 	// open up matrix file for reading
-	if(!(inputFile = fopen(fileName,"r")))
+	if((inputFile = fopen(fileName,"r")) == NULL){
+		printf("failed\n");
 		die("fopen");
+	}
 
 	// Get dimensions of A and B
 	getABDim(inputFile, &Arows, &Acols, &Brows, &Bcols);
@@ -49,34 +51,27 @@ int main(void) {
 
 	// close matrix file from reading
 	fclose(inputFile);
-	printf("success\n");
+	printf("Success\n");
 
 	// set one thread per row
 	int NUM_THREADS = Arows;
 
-	// Number of Rows computed by each slave
-	rowsEach = Arows/NUM_THREADS;
+	// Number of Rows computed by each thread
+	rowsEach = Arows;
 
 	// Number of extra Rows computed by master
-	remainder = Arows%NUM_THREADS;
+	remainder = 0;
 
    // create threads
    printf("Creating threads...");
    int i, threadID[NUM_THREADS];
    pthread_t threads[NUM_THREADS];
-
    for(i=0; i < NUM_THREADS; i++){
-	 if (pthread_create(&(threads[i]), NULL, &threadStart, (void*) &threadID[i]))
+	   threadID[i] = i;
+	 if (pthread_create(&(threads[i]), NULL, &threadStart, (void*) &(threadID[i])))
 	   die("pthread_create");
 	}
    printf("Success\n");
-
-
-   if(remainder >0){
-		// Compute remainder
-		int start = Arows-remainder;
-		matrixMultiply(A, Arows, B, Bcols, R, Acols, start);
-   }
 
    // wait for all threads to finish
    printf("Waiting for threads to finish...");
@@ -96,19 +91,19 @@ int main(void) {
 }
 
 // Driver for threads
-static void* threadStart(void* input){
+void* threadStart(void* input){
 	int start, *threadID;
 	threadID = (int*) input;
 
 	start = *threadID*rowsEach;
 	matrixMultiply(A, rowsEach, B, Bcols, R, Acols, start);
-	return (void*) &A;
+	return (void*) NULL;
 }
 
 // multiplies Matrix myA with matrix B and stores the results in myR
 void matrixMultiply(double* myA, int rowsEach, double* myB, int Bcols, double* myR, int Acols, int start){
 int i, j, k;
-for(i=start; i<rowsEach; i++)
+for(i=start; i<start+rowsEach; i++)
 	for(j=0; j<Bcols; j++)
 		for(k=0; k<Acols; k++)
 			myR[i*Bcols+j]+= myA[i*Acols+k]*myB[k*Bcols+j];

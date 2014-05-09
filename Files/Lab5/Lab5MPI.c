@@ -33,11 +33,8 @@ int main(int argc, char* argv[]){
 
 	/* find out number of processes */
 	MPI_Comm_size(MPI_COMM_WORLD, &numProc);
-	if (numProc < 1 ) {
-	  printf("Need at least one MPI task. Quitting...\n");
-	  MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-	  exit(EXIT_FAILURE);
-	 }
+	if (numProc < 1 )
+		die("Need at least one MPI task. Quitting...\n");
 	
 	/* find out process rank */
 	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -49,15 +46,25 @@ int main(int argc, char* argv[]){
 
 		printf("Master reading in matrix data...");
 		// open up matrix file for reading
-		if(!(inputFile = fopen(fileName,"r")))
+		if((inputFile = fopen(fileName,"r")) == NULL){
+			printf("failure\n");
 			die("fopen");
+		}
 
 		// Get dimensions of A and B
 		getABDim(inputFile, &Arows, &Acols, &Brows, &Bcols);
 
 		// Verify multiplicity
-		if(Acols != Brows)
+		if(Acols != Brows){
+			printf("failure\n");
 			die("Matrices' sizes don't allow for multiplication.\n");
+		}
+
+		if (numProc > Arows){
+			printf("failure\n");
+		   printf("Too many processes. No more than %i for the input data.\n", Arows);
+		   die("\n");
+		}
 
 		// Create A and B using dimensions
 		MPI_Alloc_mem(Arows*Acols*sizeof(double), MPI_INFO_NULL, &A);
@@ -99,10 +106,6 @@ int main(int argc, char* argv[]){
 		R = (double*) NULL;
    }
 
-   //Make sure the integer division does not return zero but utilises as many cpus as possibl
-   if(numProc > Arows)
-	   numProc = Arows;
-
 	// Number of Rows computed by each slave
 	rowsEach = Arows/numProc;
 
@@ -129,9 +132,6 @@ int main(int argc, char* argv[]){
     // Return local results to Master
     if(MPI_Gather(myR, rowsEach*Bcols, MPI_DOUBLE, R, rowsEach*Bcols, MPI_DOUBLE, MASTER, MPI_COMM_WORLD)!=MPI_SUCCESS)
     	die("MPI_Gather");
-
-    if(myRank == 1)
-    	printMatrices(myA, rowsEach, Acols, B, Brows, Bcols, myR);
 
     if(myRank == MASTER){
     	// Master computes the remainder rows
@@ -222,6 +222,6 @@ void printMatrices(double *A, int Arows, int Acols, double *B, int Brows, int Bc
 // function to kill program in case of error
 void die(char* s) {
 	perror(s);	// error message
-	MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+	MPI_Finalize(); // Bye-bye cruel world
 	exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
 }
