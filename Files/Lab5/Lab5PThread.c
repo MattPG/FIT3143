@@ -2,81 +2,116 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#define NUM_THREADS		8
 
 // HEADER
 // method a pthread calls to parse the string
-void* startParse(void* input);
-// error messenger
+void printMatrices(double *A, int Arows, int Acols, double *B, int Brows, int Bcols, double *R);
+void matrixMultiply(double* myA, int rowsEach, double* B, int Bcols, double* myR, int Acols, int start);
+void getAB(FILE *inputFile, double *A, int Arows, int Acols, double *B, int Brows, int Bcols);
+void getABDim(FILE *inputFile, int* Arows, int* Acols, int* Brows, int* Bcols);
+static void* threadStart(void* input);
 void die(char* s);
 
 // Declare global counter and string
 char *string;
 int fileSize, spacing;
 
+// Declare global matrices to hold data
+double *A, *B, *R;
+// Variables for the dimensions of the matrices
+int Arows, Acols, Brows, Bcols, rowsEach;
 
 int main(void) {
-	// declare required variables and pointers
-	char *fileName = "input_text.txt";
-	int readSize, charSize, totalCount = 0;
-	long threadID;
-	pthread_t threads[NUM_THREADS];
+	int remainder;
+
+	char *fileName = "matrices.txt";
 	FILE *inputFile;
 
-	charSize = sizeof(char);
-	inputFile = fopen(fileName,"r");
+	printf("Reading in matrix data...");
+	// open up matrix file for reading
+	if(!(inputFile = fopen(fileName,"r")))
+		die("fopen");
 
-	if (inputFile) {
+	// Get dimensions of A and B
+	getABDim(inputFile, &Arows, &Acols, &Brows, &Bcols);
 
-	   // seek the last byte of the file
-	   fseek(inputFile,0,SEEK_END);
-	   // number of characters in file
-	   fileSize = ftell(inputFile);
-	   // go back to the start of the file
-	   rewind(inputFile);
+	// Verify multiplicity
+	if(Acols != Brows)
+		die("Matrices' sizes don't allow for multiplication.\n");
 
-	   // create memory that can hold it all
-	   string = malloc(fileSize);
+	// Create A and B using dimensions
+	A = calloc(Arows*Acols, sizeof(double));
+	B = calloc(Brows*Bcols, sizeof(double));
+	R = calloc(Arows*Bcols, sizeof(double));
 
-	   // Place the text into shared memory
-	   readSize = fread(string, charSize, fileSize, inputFile);
+	// Read data into A and B
+	getAB(inputFile, A, Arows, Acols, B, Brows, Bcols);
 
-	   // close the input file
-	   fclose(inputFile);
+	// close matrix file from reading
+	fclose(inputFile);
+	printf("success\n");
 
-	   // check no errors occurred in reading file
-	   if (fileSize != readSize)
-		   die("Parsed sizes don't match!");
+	// set one thread per row
+	int NUM_THREADS = Arows;
 
-	   // compute the spacing between each thread
-	   spacing = (int) ceil((double)(fileSize) / NUM_THREADS);
+	// Number of Rows computed by each slave
+	rowsEach = Arows/NUM_THREADS;
 
-	   // create threads
-	   printf("Creating threads...\n");
-	   for(threadID=0; threadID < NUM_THREADS; threadID++){
-	     if (pthread_create(&threads[threadID], NULL, startParse, (void*) threadID)){
-	       die("pthread_create " + threadID);
-	       }
-	     }
+	// Number of extra Rows computed by master
+	remainder = Arows%NUM_THREADS;
 
-	   // wait for all threads to finish
-	   int *value = malloc(sizeof(int));
-	   for(threadID = 0; threadID<NUM_THREADS; threadID++){
-		   pthread_join(threads[threadID], value);
-		   totalCount += *value;
-	   }
+   // create threads
+   printf("Creating threads...");
+   int i, threadID[NUM_THREADS];
+   pthread_t threads[NUM_THREADS];
 
-	   // print the total value
-	   printf("Total number of words: %i\n", totalCount);
+   for(i=0; i < NUM_THREADS; i++){
+	 if (pthread_create(&(threads[i]), NULL, &threadStart, (void*) &threadID[i]))
+	   die("pthread_create");
+	}
+   printf("Success\n");
 
-	   // free the allocated memory
-	   free(string);
 
-	   exit(EXIT_SUCCESS);
-	} else	die("fopen");
+   if(remainder >0){
+		// Compute remainder
+		int start = Arows-remainder;
+		matrixMultiply(A, Arows, B, Bcols, R, Acols, start);
+   }
 
-	exit(EXIT_FAILURE);
+   // wait for all threads to finish
+   printf("Waiting for threads to finish...");
+   for(i = 0; i<NUM_THREADS; i++)
+	   pthread_join(threads[i], NULL);
+   printf("Success\n");
+
+   // Display the matrices
+   printMatrices(A,Arows,Acols,B,Brows,Bcols,R);
+
+   // Free the allocated arrays
+   free(A);
+   free(B);
+   free(R);
+
+   exit(EXIT_SUCCESS);
+}
+
+// Driver for threads
+static void* threadStart(void* input){
+	int start, *threadID;
+	threadID = (int*) input;
+
+	start = *threadID*rowsEach;
+	matrixMultiply(A, rowsEach, B, Bcols, R, Acols, start);
+	return (void*) &A;
+}
+
+// multiplies Matrix myA with matrix B and stores the results in myR
+void matrixMultiply(double* myA, int rowsEach, double* myB, int Bcols, double* myR, int Acols, int start){
+int i, j, k;
+for(i=start; i<rowsEach; i++)
+	for(j=0; j<Bcols; j++)
+		for(k=0; k<Acols; k++)
+			myR[i*Bcols+j]+= myA[i*Acols+k]*myB[k*Bcols+j];
 }
 
 // die prints out a descriptive error message then quits the program
@@ -85,38 +120,56 @@ void die(char* s) {
     exit(EXIT_FAILURE);	// exit call with unsuccessful completion of program
 }
 
+/* function to print matrices A,B,C */
+void printMatrices(double *A, int Arows, int Acols, double *B, int Brows, int Bcols, double *R){
+	int i,j;
 
-// Start parsing for words
-void* startParse(void* input){
-	// declare local string pointers
-	char currChar, prevChar;
-	int currPointer, endPointer, counter;
-
-	// get this thread's ID
-	long threadID = (long) input;
-	printf("Thread #%ld created...\n", threadID);
-
-	// initialise end pointer
-	endPointer = (threadID == (NUM_THREADS -1)) ? (fileSize) : (spacing * (threadID+1) -1);
-
-	// initialise the local word count
-	counter = 0;
-
-	// iterate through string
-	for(currPointer = spacing * threadID; currPointer <= endPointer; currPointer++){
-		currChar = string[currPointer];
-		prevChar = (currPointer == 0) ? ' ' : string[currPointer -1];
-		// Check if current char is a space
-		if(currChar == ' ' || currChar == '\n' || currChar == '\r'
-				|| currChar == '\t'|| currChar == '\0')
-				// Check if previous char was non-space
-			   if(prevChar != ' ' && prevChar != '\n' && prevChar != '\r'
-					   && prevChar != '\t' && prevChar != '\0')
-				   	   //increment word counter
-				   	   counter++;
+	printf("\nMatrix A (%d x %d)\n", Arows, Acols);
+	for (i=0; i<Arows; i++) {
+		for (j=0; j<Acols; j++)
+			printf("%5.0lf ",A[i*Acols +j]);
+		printf("\n");
 	}
 
-	   // print personal amount
-	   printf("Thread #%ld adding %i words...\n",threadID, counter);
-	   pthread_exit(counter);
+	printf("\nMatrix B (%d x %d)\n", Brows, Bcols);
+	for (i=0; i<Brows; i++) {
+		for (j=0; j<Bcols; j++)
+			printf("%5.0lf ",B[i*Bcols +j]);
+		printf("\n");
+	}
+
+
+	printf("\nMatrix R = Matrix A * Matrix B (%d x %d)\n", Arows, Bcols);
+	for (i=0; i<Arows; i++) {
+		for (j=0; j<Bcols; j++)
+			printf("%5.0lf ",R[i*Bcols +j]);
+		printf("\n");
+	}
+
+	printf("\n");
+
+}
+
+/* function to read in Matrix A and Matrix B */
+void getAB(FILE *inputFile, double *A, int Arows, int Acols, double *B, int Brows, int Bcols) {
+	int i,j;
+
+	// Read in matrix A
+	for (i=0; i<Arows; i++)
+		for (j=0; j<Acols; j++)
+			if(fscanf(inputFile, "%lf", &(A[i*Acols +j])) != 1)
+				die("fscanf Matrix A values");
+
+	// Read in matrix B
+	for (i=0; i<Brows; i++)
+		for (j=0; j<Bcols; j++)
+			if(fscanf(inputFile, "%lf", &B[i*Bcols +j]) != 1)
+				die("fscanf Matrix B values");
+}
+
+// Function gets the dimensions of matrix A and matrix B
+void getABDim(FILE *inputFile, int* Arows, int* Acols, int* Brows, int* Bcols){
+	// Get matrices' dimensions
+	if(fscanf(inputFile, "%d %d %d %d",Arows,Acols,Brows,Bcols) != 4)
+		die("fscanf matrix dimensions");
 }

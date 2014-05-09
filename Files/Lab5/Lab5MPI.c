@@ -99,6 +99,10 @@ int main(int argc, char* argv[]){
 		R = (double*) NULL;
    }
 
+   //Make sure the integer division does not return zero but utilises as many cpus as possibl
+   if(numProc > Arows)
+	   numProc = Arows;
+
 	// Number of Rows computed by each slave
 	rowsEach = Arows/numProc;
 
@@ -125,6 +129,9 @@ int main(int argc, char* argv[]){
     // Return local results to Master
     if(MPI_Gather(myR, rowsEach*Bcols, MPI_DOUBLE, R, rowsEach*Bcols, MPI_DOUBLE, MASTER, MPI_COMM_WORLD)!=MPI_SUCCESS)
     	die("MPI_Gather");
+
+    if(myRank == 1)
+    	printMatrices(myA, rowsEach, Acols, B, Brows, Bcols, myR);
 
     if(myRank == MASTER){
     	// Master computes the remainder rows
