@@ -22,12 +22,10 @@ double *A, *B, *R;
 int Arows, Acols, Brows, Bcols, rowsEach;
 
 int main(void) {
-	int remainder;
-
 	char *fileName = "matrices.txt";
 	FILE *inputFile;
 
-	printf("Reading in matrix data...");
+	printf("Reading in matrix data...\n");
 	// open up matrix file for reading
 	if((inputFile = fopen(fileName,"r")) == NULL){
 		printf("failed\n");
@@ -51,7 +49,7 @@ int main(void) {
 
 	// close matrix file from reading
 	fclose(inputFile);
-	printf("Success\n");
+	printf("Matrices read successfully.\n");
 
 	// set one thread per row
 	int NUM_THREADS = Arows;
@@ -59,25 +57,22 @@ int main(void) {
 	// Number of Rows computed by each thread
 	rowsEach = Arows;
 
-	// Number of extra Rows computed by master
-	remainder = 0;
-
    // create threads
-   printf("Creating threads...");
+   printf("Creating threads...\n");
    int i, threadID[NUM_THREADS];
    pthread_t threads[NUM_THREADS];
    for(i=0; i < NUM_THREADS; i++){
 	   threadID[i] = i;
-	 if (pthread_create(&(threads[i]), NULL, &threadStart, (void*) &(threadID[i])))
+	 if (pthread_create(&(threads[i]), NULL, &threadStart, (void*) &(threadID[i])) != 0)
 	   die("pthread_create");
-	}
-   printf("Success\n");
+   }
+   printf("Threads created.\n");
 
    // wait for all threads to finish
-   printf("Waiting for threads to finish...");
+   printf("Waiting for threads to finish...\n");
    for(i = 0; i<NUM_THREADS; i++)
 	   pthread_join(threads[i], NULL);
-   printf("Success\n");
+   printf("Threads closed.\n");
 
    // Display the matrices
    printMatrices(A,Arows,Acols,B,Brows,Bcols,R);
