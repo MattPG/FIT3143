@@ -55,7 +55,7 @@ int main(void) {
 	int NUM_THREADS = Arows;
 
 	// Number of Rows computed by each thread
-	rowsEach = Arows;
+	rowsEach = 1;
 
    // create threads
    printf("Creating threads...\n");
