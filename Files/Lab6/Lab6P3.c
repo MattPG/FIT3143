@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_ELEMENTS	100000
-#define ITERATIONS		10000
-#define MAX_THREADS		4
+#define MAX_ELEMENTS		101000
+#define SLOW_ITERATIONS		10000
+#define MAX_THREADS			1
 
 int a[MAX_ELEMENTS], b[MAX_ELEMENTS], c[MAX_ELEMENTS];
 
@@ -39,13 +39,19 @@ int main(void) {
 
 // Driver for threads
 void* threadStart(void* input){
-	int *threadID, i, j, id;
+	int *threadID, i, j, id, iStart, iEnd;
 	threadID = (int*) input;
 	id = *threadID;
 
-	for(j=0; j<ITERATIONS; j++){
-		for(i=id * (MAX_ELEMENTS/MAX_THREADS); i < (id+1) * (MAX_ELEMENTS/MAX_THREADS) ; i++){
-			a[i] = b[i] + c[i];
+	// Split the size of the set into the number of threads
+	iStart = id * ((MAX_ELEMENTS-1000)/(MAX_THREADS));
+	iEnd = (id+1) * ((MAX_ELEMENTS-1000)/(MAX_THREADS));
+
+	// Increase the amount of actual work
+	for(j=0; j<SLOW_ITERATIONS; j++){
+		// Complete my share of the elements
+		for( i = iStart; i < iEnd; i++){
+			a[i] = a[i%1000] + i/1000;
 		}
 	}
 
