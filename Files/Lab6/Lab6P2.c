@@ -3,13 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_ELEMENTS		100000
+#define MAX_ELEMENTS		101000
 #define SLOW_ITERATIONS		10000
 #define SET_SIZE			1000
-#define MAX_THREADS			1
+#define MAX_THREADS			4
 
 int a[MAX_ELEMENTS], b[MAX_ELEMENTS], c[MAX_ELEMENTS];
-const int kIterations = MAX_ELEMENTS / SET_SIZE;
+const int kIterations = (MAX_ELEMENTS-1000) / SET_SIZE;
 
 // HEADER
 void die(char* s);

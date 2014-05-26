@@ -4,8 +4,8 @@
 #include <stdlib.h>
 
 #define MAX_ELEMENTS		101000
-#define SLOW_ITERATIONS		10000
-#define MAX_THREADS			1
+#define SLOW_ITERATIONS		5000
+#define MAX_THREADS			4
 
 int a[MAX_ELEMENTS], b[MAX_ELEMENTS], c[MAX_ELEMENTS];
 
@@ -44,8 +44,8 @@ void* threadStart(void* input){
 	id = *threadID;
 
 	// Split the size of the set into the number of threads
-	iStart = id * ((MAX_ELEMENTS-1000)/(MAX_THREADS));
-	iEnd = (id+1) * ((MAX_ELEMENTS-1000)/(MAX_THREADS));
+	iStart = id * (MAX_ELEMENTS-1000)/(MAX_THREADS) + 1000;
+	iEnd = (id+1) * (MAX_ELEMENTS-1000)/(MAX_THREADS) + 1000;
 
 	// Increase the amount of actual work
 	for(j=0; j<SLOW_ITERATIONS; j++){
